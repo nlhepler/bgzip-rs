@@ -53,10 +53,12 @@ impl BGzWriter {
             .num_threads(2 + more_threads)
             .build()
             .unwrap();
-        let (s_buf, r_buf) = bounded(2 + 2 * more_threads);
+        // 2 each for compressors and main, 1 for writer
+        let (s_buf, r_buf) = bounded(3 + 2 * more_threads);
+        // 1 for each compressor
         let (s_out, r_out) = bounded(1 + more_threads);
         let (s_end, r_end) = bounded(1);
-        for _ in 0..2 + 2 * more_threads {
+        for _ in 0..3 + 2 * more_threads {
             s_buf.send(Ok(Vec::with_capacity(DEFAULT_BUFFER))).unwrap();
         }
         let send_buf = s_buf.clone();
