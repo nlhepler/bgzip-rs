@@ -17,6 +17,7 @@
 //! for _ in 0..30000 {
 //!     writer.write(&data[..])?;
 //! }
+//! writer.finish()?;
 //! # Ok(())
 //! # }
 //! ```
@@ -200,6 +201,28 @@ impl BGzWriter {
             seq: 0,
         }
     }
+
+    pub fn finish(&mut self) -> io::Result<()> {
+        if self.channels.is_some() {
+            self.flush()?;
+            let r_end = {
+                let (r_buf, r_end) = {
+                    let mut tmp = None;
+                    std::mem::swap(&mut self.channels, &mut tmp);
+                    let (r_buf, _, _, _, r_end) = tmp.unwrap();
+                    (r_buf, r_end)
+                };
+                // ensure we've received all the outstanding buffers
+                for x in r_buf.iter() {
+                    x?;
+                }
+                r_end
+            };
+            // ensure the compressor and writer thread have finished
+            for _ in r_end.iter() {}
+        }
+        Ok(())
+    }
 }
 
 impl io::Write for BGzWriter {
@@ -225,21 +248,8 @@ impl io::Write for BGzWriter {
 
 impl Drop for BGzWriter {
     fn drop(&mut self) {
-        // if we want to avoid a panic here, the user should call flush()? before it drops
-        self.flush().unwrap();
-        let r_end = {
-            let (r_buf, r_end) = {
-                let mut tmp = None;
-                std::mem::swap(&mut self.channels, &mut tmp);
-                let (r_buf, _, _, _, r_end) = tmp.unwrap();
-                (r_buf, r_end)
-            };
-            // ensure we've received all the outstanding buffers
-            for _ in r_buf.iter() {}
-            r_end
-        };
-        // ensure the compressor and writer thread have finished
-        for _ in r_end.iter() {}
+        // ideally the user calls finish() before this drops
+        self.finish().unwrap();
     }
 }
 
@@ -260,6 +270,7 @@ mod test {
             for _ in 0..30000 {
                 writer.write(&data[..])?;
             }
+            writer.finish()?;
         }
         {
             let f = io::BufReader::new(fs::File::open("tmp/test.gz").unwrap());
