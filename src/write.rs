@@ -111,7 +111,8 @@ impl BGzWriter {
                     let mut crc = CrcWriter::new(inner.unwrap());
                     crc.write(&buffer)?;
                     let cksum = crc.crc().sum();
-                    std::mem::swap(&mut Some(crc.into_inner()), &mut encoder);
+                    inner = Some(crc.into_inner());
+                    std::mem::swap(&mut inner, &mut encoder);
                     let buflen = buffer.len();
                     buffer.clear();
                     let compressed = encoder.as_mut().unwrap().reset(buffer)?;
@@ -224,8 +225,7 @@ impl io::Write for BGzWriter {
 
 impl Drop for BGzWriter {
     fn drop(&mut self) {
-        // the only way flush() fails is if the buffer channel is closed prematurely. panicking in
-        // that case is completely warranted--something has gone horribly wrong.
+        // if we want to avoid a panic here, the user should call flush()? before it drops
         self.flush().unwrap();
         let r_end = {
             let (r_buf, r_end) = {
@@ -238,7 +238,7 @@ impl Drop for BGzWriter {
             for _ in r_buf.iter() {}
             r_end
         };
-        // ensure the writer thread has finished
+        // ensure the compressor and writer thread have finished
         for _ in r_end.iter() {}
     }
 }
