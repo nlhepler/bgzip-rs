@@ -39,7 +39,9 @@
 //! # }
 //! ```
 
+extern crate crossbeam_channel;
 extern crate flate2;
+extern crate rayon;
 
 pub mod header;
 pub mod read;
