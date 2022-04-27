@@ -17,3 +17,5 @@ maintenance = { status = "experimental" }
 
 [dependencies]
 flate2 = "1"
+rayon = "^1.2"
+crossbeam-channel = "^0.5"

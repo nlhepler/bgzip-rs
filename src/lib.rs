@@ -22,7 +22,7 @@
 //!
 //! ## Writer Example
 //! ```
-//! use bgzip::write::BGzWriter;
+//! use bgzip::write::BGzBuilder;
 //! use std::fs;
 //! use std::io;
 //! use std::io::prelude::*;
@@ -30,7 +30,7 @@
 //! # fn main() { let _ = run(); }
 //! # fn run() -> io::Result<()> {
 //! let data = b"0123456789ABCDEF";
-//! let mut writer = BGzWriter::new(fs::File::create("tmp/test2.gz")?);
+//! let mut writer = BGzBuilder::new().write(fs::File::create("tmp/test2.gz")?);
 //!
 //! for _ in 0..30000 {
 //!     writer.write(&data[..])?;
@@ -39,7 +39,9 @@
 //! # }
 //! ```
 
+extern crate crossbeam_channel;
 extern crate flate2;
+extern crate rayon;
 
 pub mod header;
 pub mod read;
